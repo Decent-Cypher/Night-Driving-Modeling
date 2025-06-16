@@ -63,16 +63,12 @@ def FVD_acceleration(positions: NDArray[np.float64], velocities: NDArray[np.floa
     # Compute headways with periodic boundary conditions
     delta_x = np.roll(positions, -1) - positions
     delta_x[-1] = SYSTEM_LENGTH - positions[-1] + positions[0]  # Wrap around for the last car
-    print(delta_x)
     # Compute optimal velocities for each headway
     V = optimal_velocity_function(delta_x)
-    print(V)
     # Compute velocity differences between each vehicle and its leader
     delta_v = np.roll(velocities, -1) - velocities
-    print(delta_v)
     # Compute accelerations
     accelerations = kappa * (V - velocities) + _lambda * delta_v
-    print(accelerations)
 
     return accelerations
 
@@ -87,6 +83,10 @@ class FVD_Simulator:
         - velocities: initial velocities of the cars
         - optimal_velocity_function: function to calculate optimal velocity
         """
+        # Velocities must be non-negative
+        assert np.all(velocities >= 0), "Velocities must be non-negative."
+        # Positions must be within the system length
+        assert np.all(positions >= 0) and np.all(positions < SYSTEM_LENGTH), "Positions must be within the system length."
         self.positions = positions
         self.velocities = velocities
         self.optimal_velocity_function = optimal_velocity_function
@@ -99,10 +99,12 @@ class FVD_Simulator:
         """
         # Calculate accelerations
         accelerations = FVD_acceleration(self.positions, self.velocities, self.optimal_velocity_function, self.kappa, self._lambda)
+        # Update positions
+        self.positions = np.maximum(self.positions, self.positions + self.velocities * self.delta_t + 0.5 * accelerations * self.delta_t**2)
         # Update velocities
         self.velocities += accelerations * self.delta_t
-        # Update positions
-        self.positions += self.velocities * self.delta_t + 0.5 * accelerations * self.delta_t**2
+        # Ensure positions are circular around the system length
+        self.velocities = np.clip(self.velocities, 0, None)  # Ensure non-negative velocities
         self.positions[self.positions >= SYSTEM_LENGTH] -= SYSTEM_LENGTH  # Wrap around positions
         
     @overload
@@ -141,9 +143,19 @@ if __name__ == '__main__':
     from functools import partial
     test_optimal_velocity = partial(night_optimal_velocity, x_c=2.0, a=5.0, b=1.0, x_c1=3.2, x_c2=4.0)
     test_positions = np.array([450. , 451.2, 455. , 460. ]).astype(np.float64)
+    SIMULATION_STEPS = 500
     print("Test positions:", test_positions)
     test_velocities = np.array([1, 1.8, 2.2, 5]).astype(np.float64)
     print("Test velocities:", test_velocities)
+    
+    # N = 150
+    # test_positions = np.random.uniform(low=0.0, high=SYSTEM_LENGTH, size=N).astype(np.float64)
+    # test_positions.sort()
+    # SIMULATION_STEPS = 2000
+    # print("Test positions:", test_positions)
+    # test_velocities = np.zeros_like(test_positions, dtype=np.float64)
+    # print("Test velocities:", test_velocities)
+    
     sim = FVD_Simulator(
         positions=test_positions,
         velocities=test_velocities,
@@ -152,25 +164,7 @@ if __name__ == '__main__':
         _lambda=0.5,
         delta_t=0.1
     )
-    log_p, log_v = sim.run(steps=500, log_result=True)
-        
-    # Number of positions per array
-    num_positions = 4
-
-    # Generate a colormap
-    cmap = plt.get_cmap('viridis')
-    colors = [cmap(i / num_positions) for i in range(num_positions)]
-
-    # Iterate over each position index
-    for i in range(num_positions):
-        x = [idx for idx, _ in enumerate(log_p)]
-        y = [positions[i] for positions in log_p]
-        plt.scatter(x, y, color=colors[i], label=f'Position {i+1}')
-
-    # Customize the plot
-    plt.xlabel('Time Step')
-    plt.ylabel('Position')
-    plt.title('Car Positions Over Time')
-    plt.legend()
-    plt.grid(True)
-    plt.savefig('car_positions_over_time.png')
+    log_p, log_v = sim.run(steps=SIMULATION_STEPS, log_result=True)
+    
+    print(log_p)
+    
