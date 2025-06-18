@@ -7,5 +7,6 @@ requires-python = ">=3.12"
 dependencies = [
     "matplotlib>=3.10.3",
     "numpy>=2.2.6",
+    "pyqt6>=6.9.1",
     "tqdm>=4.67.1",
 ]
