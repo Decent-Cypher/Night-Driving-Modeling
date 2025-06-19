@@ -36,7 +36,7 @@ def calculate_flow(positions_list: list[NDArray[np.float64]], velocities_list: l
     # print(f"Average velocity: {avg_velocity}, Density: {density}, Flow: {flow}")
     return flow
 
-def plot_traffic_raster(positions_list: list[NDArray[np.float64]], figsize: tuple[int, int] = (6, 8)):
+def plot_traffic_raster(positions_list: list[NDArray[np.float64]], figsize: tuple[int, int] = (6, 8), filename:str='traffic_raster_plot.png') -> None:
     """
     Generate a binary traffic raster plot with correct axis mapping.
 
@@ -47,6 +47,7 @@ def plot_traffic_raster(positions_list: list[NDArray[np.float64]], figsize: tupl
     - cmap: colormap ('Greys' gives 0=black, 1=white).
     - figsize: output figure size.
     """
+    positions_list = [positions_list[i] for i in range(0, len(positions_list), 2)]
     T = len(positions_list)
     L = int(SYSTEM_LENGTH)
     mat = np.zeros((T, L), dtype=np.uint8)  # create white background
@@ -65,7 +66,7 @@ def plot_traffic_raster(positions_list: list[NDArray[np.float64]], figsize: tupl
     ax.set_xlim(-0.5, L - 0.5)
     ax.set_ylim(-0.5, T - 0.5)
     plt.tight_layout()
-    plt.savefig('traffic_raster_plot.png', dpi=300)
+    plt.savefig(filename, dpi=300)
 
 def animate_simulation(positions_list:list[NDArray[np.float64]], interval:int=200):
     """
@@ -319,7 +320,7 @@ class FVD_Simulator_with_Perturbation:
                 
             return None
 
-def run_test(optimal_velocity_function:Callable[[NDArray[np.float64]], NDArray[np.float64]], simulation_steps:int=1000, kappa:float=1.0, _lambda:float=0.5, delta_t:float=0.1, n_dec:int=0, debug_checkpoint:int=-1):
+def plot_fundamental_diagram(optimal_velocity_function:Callable[[NDArray[np.float64]], NDArray[np.float64]], simulation_steps:int=1000, kappa:float=1.0, _lambda:float=0.5, delta_t:float=0.1, n_dec:int=0, debug_checkpoint:int=-1, filename:str='fundamental_diagram.png'):
     """
     Run a test simulation with the given parameters.
     
@@ -336,7 +337,7 @@ def run_test(optimal_velocity_function:Callable[[NDArray[np.float64]], NDArray[n
         # positions = np.random.uniform(low=0.0, high=SYSTEM_LENGTH, size=N).astype(np.float64)
         # positions.sort()
         positions = np.linspace(0, SYSTEM_LENGTH-SYSTEM_LENGTH/N, N).astype(np.float64)  # Evenly spaced positions
-        velocities = np.ones_like(positions, dtype=np.float64) * 0.2
+        velocities = np.ones_like(positions, dtype=np.float64) * 0.05
         
         sim = None
         if n_dec == 0:
@@ -365,15 +366,17 @@ def run_test(optimal_velocity_function:Callable[[NDArray[np.float64]], NDArray[n
         flow = calculate_flow(log_p, log_v)
         y_axis.append(flow)
         if debug_checkpoint > 0 and N == debug_checkpoint:
-            plot_traffic_raster(log_p, figsize=(6, 8))
+            plot_traffic_raster(log_p, figsize=(6, 8), filename=filename[:-4] + f'_debug_{debug_checkpoint}.png')
+    # Convert the number of cars to density
+    x_axis = [item / SYSTEM_LENGTH for item in x_axis]
     plt.figure(figsize=(10, 6))
     plt.plot(x_axis, y_axis, marker='o', linestyle='-', color='b')
-    plt.title('Flow vs Number of Cars')
-    plt.xlabel('Number of Cars')
-    plt.ylabel('Flow (cars per second)')
+    plt.title('Fundamental Diagram')
+    plt.xlabel('Density (cars per unit length)')
+    plt.ylabel('Flow (cars per timestep)')
     plt.grid()
     plt.tight_layout()
-    plt.savefig('flow_vs_number_of_cars.png', dpi=300)
+    plt.savefig(filename, dpi=300)
 
 if __name__ == '__main__':
     from functools import partial
@@ -387,7 +390,7 @@ if __name__ == '__main__':
     
     N = 150
     SIMULATION_STEPS = 500
-    run_test(
+    plot_fundamental_diagram(
         optimal_velocity_function=test_optimal_velocity,
         simulation_steps=SIMULATION_STEPS,
         kappa=1,
@@ -397,35 +400,5 @@ if __name__ == '__main__':
         debug_checkpoint=250
     )
     
-    
-    # test_positions = np.random.uniform(low=0.0, high=SYSTEM_LENGTH, size=N).astype(np.float64)
-    # test_positions = np.linspace(0, SYSTEM_LENGTH-SYSTEM_LENGTH/N, N).astype(np.float64)  # Evenly spaced positions
-    # test_positions.sort()
-    # print("Test positions:", test_positions)
-    # test_velocities = np.ones_like(test_positions, dtype=np.float64) * 0.2
-    # print("Test velocities:", test_velocities)
-    
-    # sim = FVD_Simulator(
-    #     positions=test_positions,
-    #     velocities=test_velocities,
-    #     optimal_velocity_function=test_optimal_velocity,
-    #     kappa=1,
-    #     _lambda=0.5,
-    #     delta_t=0.1,
-    # )
-    # log_p, log_v = sim.run(steps=SIMULATION_STEPS, log_result=True)
-    
-    # plot_traffic_raster(log_p, figsize=(6, 8))
-    
-    # calculate_flow(log_p, log_v)
-    
-    
-    
-    # ani = animate_simulation(log_p, interval=100)
-    # progress_bar = tqdm(total=SIMULATION_STEPS, desc="Animating Heat Distribution", unit="frame")
-    # def update_progress(current_frame, total_frames): # pyright: ignore[reportUnusedParameter, reportMissingParameterType, reportUnknownParameterType]
-    #     progress_bar.update(1)
-    # ani.save("fvd_simulation.mp4", writer='ffmpeg', fps=240, progress_callback=update_progress)
-    # progress_bar.close()
     
     
