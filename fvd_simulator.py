@@ -241,6 +241,76 @@ class FVD_Simulator:
             return None
 
 @final
+class FVD_Simulator_with_Randomness:
+    def __init__(self, positions: NDArray[np.float64], velocities: NDArray[np.float64], optimal_velocity_function:Callable[[NDArray[np.float64]], NDArray[np.float64]], kappa: float, _lambda: float, delta_t: float=0.1, A: float=0.1):
+        """
+        Initialize the simulator with car positions, velocities, and an optimal velocity function.
+        
+        Parameters:
+        - positions: initial positions of the cars
+        - velocities: initial velocities of the cars
+        - optimal_velocity_function: function to calculate optimal velocity
+        """
+        # Velocities must be non-negative
+        assert np.all(velocities >= 0), "Velocities must be non-negative."
+        # Positions must be within the system length
+        assert np.all(positions >= 0) and np.all(positions < SYSTEM_LENGTH), "Positions must be within the system length."
+        self.positions = positions
+        self.velocities = velocities
+        self.optimal_velocity_function = optimal_velocity_function
+        self.kappa = kappa
+        self._lambda = _lambda
+        self.delta_t = delta_t
+        self.A = A # Amplitude of the randomness
+    def step(self):
+        """
+        Perform a single simulation step, updating positions and velocities.
+        """
+        # Calculate accelerations
+        accelerations = FVD_acceleration(self.positions, self.velocities, self.optimal_velocity_function, self.kappa, self._lambda)
+        # Update velocities and positions
+        old_velocities = self.velocities.copy()
+        self.velocities += accelerations * self.delta_t + np.random.uniform(-0.5, 0.5, size=self.velocities.shape) * self.A  # Add randomness to velocities
+        self.velocities = np.clip(np.clip(self.velocities, 0, None), None, self.optimal_velocity_function(np.array(3.2)).item())
+        thres = np.roll(self.positions, -1)
+        thres[thres < np.roll(thres, 1)] += SYSTEM_LENGTH  # Adjust positions for periodic boundary conditions
+        self.positions = np.minimum(np.maximum(self.positions, self.positions + 0.5 * (old_velocities + self.velocities) * self.delta_t), thres)  # Update positions using average velocity
+        
+        self.positions[self.positions >= SYSTEM_LENGTH] -= SYSTEM_LENGTH  # Wrap around positions
+        
+    @overload
+    def run(self, steps: int, log_result:Literal[False]) -> None: ...
+    
+    @overload
+    def run(self, steps: int, log_result:Literal[True]) -> tuple[list[NDArray[np.float64]], list[NDArray[np.float64]]]: ...
+    
+    def run(self, steps: int, log_result:bool=False) -> tuple[list[NDArray[np.float64]], list[NDArray[np.float64]]] | None:
+        """
+        Run the simulation for a specified number of steps.
+        
+        Parameters:
+        - steps: number of simulation steps to run
+        - log_result: whether to log the positions and velocities at each step
+        
+        Returns:
+        - If log_result is True, returns a tuple of lists containing positions and velocities at each step.
+        - If log_result is False, returns None.
+        """
+        if log_result:
+            log_positions = [self.positions.copy()]
+            log_velocities = [self.velocities.copy()]
+            for _ in tqdm(range(steps), desc="Running FVD Simulation"):
+                self.step()
+                log_positions.append(self.positions.copy())
+                log_velocities.append(self.velocities.copy())
+            
+            return log_positions, log_velocities
+        else:
+            for _ in tqdm(range(steps), desc="Running FVD Simulation"):
+                self.step()
+            return None
+
+@final
 class FVD_Simulator_with_Perturbation:
     def __init__(self, positions: NDArray[np.float64], velocities: NDArray[np.float64], optimal_velocity_function:Callable[[NDArray[np.float64]], NDArray[np.float64]], kappa: float, _lambda: float, delta_t: float=0.1, n_dec:int=1):
         """
