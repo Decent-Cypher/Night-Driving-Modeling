@@ -333,7 +333,8 @@ class FVD_Simulator_with_Perturbation:
         self.delta_t = delta_t
         assert n_dec >= 1, "n_dec must be at least 1."
         self.n_dec = n_dec
-        self.start_perturb = False
+        self.n_dec_count = n_dec
+        self.perturb_index = None  # Index of the car to perturb, will be set in step method
     def step(self):
         """
         Perform a single simulation step, updating positions and velocities.
@@ -341,9 +342,14 @@ class FVD_Simulator_with_Perturbation:
         # Calculate accelerations
         accelerations = FVD_acceleration(self.positions, self.velocities, self.optimal_velocity_function, self.kappa, self._lambda)
         # Perturbation will change the acceleration of the car at the perturb_index to -1
+        if self.n_dec_count == self.n_dec:
+            # Randomly choose a car to perturb
+            self.perturb_index = np.random.choice(len(self.positions), size=1, replace=False).item()
         if self.n_dec > 0:
-            perturb_index = np.random.choice(len(self.positions), size=1, replace=False).item()
-            accelerations[perturb_index] = -1
+            accelerations[self.perturb_index] = -1
+            self.n_dec_count -= 1
+            if self.n_dec_count == 0:
+                self.n_dec_count = self.n_dec
         
         # Update positions
         self.positions = np.maximum(self.positions, self.positions + self.velocities * self.delta_t + 0.5 * accelerations * self.delta_t**2)
@@ -374,19 +380,15 @@ class FVD_Simulator_with_Perturbation:
         if log_result:
             log_positions = [self.positions.copy()]
             log_velocities = [self.velocities.copy()]
-            for i in tqdm(range(steps), desc="Running FVD Simulation"):
+            for _ in tqdm(range(steps), desc="Running FVD Simulation"):
                 self.step()
                 log_positions.append(self.positions.copy())
                 log_velocities.append(self.velocities.copy())
-                if i >= 100:
-                    self.start_perturb = True
             
             return log_positions, log_velocities
         else:
-            for i in tqdm(range(steps), desc="Running FVD Simulation"):
+            for _ in tqdm(range(steps), desc="Running FVD Simulation"):
                 self.step()
-                if i >= 100:
-                    self.start_perturb = True
                 
             return None
 
