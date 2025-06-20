@@ -23,11 +23,11 @@ if __name__ == "__main__":
         kappa=1,
         _lambda=0.1,
         A=0.01,
-        delta_t=0.3,
+        delta_t=0.2,
     )
     log_p, log_v = sim.run(steps=SIMULATION_STEPS, log_result=True)
     
-    plot_traffic_raster(log_p, figsize=(6, 8), filename='raster_plot_fig9a.png')
+    plot_traffic_raster(log_p, figsize=(6, 8), filename='output_images/raster_plot_fig9a.png')
     
     sim = FVD_Simulator_with_Randomness(
         positions=test_positions,
@@ -36,11 +36,11 @@ if __name__ == "__main__":
         kappa=1,
         _lambda=0.1,
         A=0.05,
-        delta_t=0.3,
+        delta_t=0.2,
     )
     log_p, log_v = sim.run(steps=SIMULATION_STEPS, log_result=True)
     
-    plot_traffic_raster(log_p, figsize=(6, 8), filename='raster_plot_fig9b.png')
+    plot_traffic_raster(log_p, figsize=(6, 8), filename='output_images/raster_plot_fig9b.png')
     
     sim = FVD_Simulator_with_Randomness(
         positions=test_positions,
@@ -53,5 +53,5 @@ if __name__ == "__main__":
     )
     log_p, log_v = sim.run(steps=SIMULATION_STEPS, log_result=True)
     
-    plot_traffic_raster(log_p, figsize=(6, 8), filename='raster_plot_fig9c.png')
+    plot_traffic_raster(log_p, figsize=(6, 8), filename='output_images/raster_plot_fig9c.png')
     

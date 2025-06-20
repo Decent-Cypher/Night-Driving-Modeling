@@ -12,3 +12,6 @@ wheels/
 # Documentation and references
 refs/
 
+# Output image directories
+output_images/
+

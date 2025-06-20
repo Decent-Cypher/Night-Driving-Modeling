@@ -17,5 +17,5 @@ if __name__ == "__main__":
         _lambda=0.5,
         n_dec=60,
         delta_t=0.15,
-        filename="fundamental_diagram_night_fig10_perturb.png",
+        filename="output_images/fundamental_diagram_night_fig10_perturb.png",
     )

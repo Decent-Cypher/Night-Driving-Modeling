@@ -26,7 +26,7 @@ if __name__ == "__main__":
     )
     log_p, log_v = sim.run(steps=SIMULATION_STEPS, log_result=True)
     
-    plot_traffic_raster(log_p, figsize=(6, 8), filename='raster_plot_fig3.png')
+    plot_traffic_raster(log_p, figsize=(6, 8), filename='output_images/raster_plot_fig3.png')
     
     # Plot the average velocity over time
     import matplotlib.pyplot as plt
@@ -39,4 +39,4 @@ if __name__ == "__main__":
     plt.legend()
     plt.grid()
     plt.tight_layout()
-    plt.savefig('average_velocity_over_time_fig3.png', dpi=300, bbox_inches='tight')
+    plt.savefig('output_images/average_velocity_over_time_fig3.png', dpi=300, bbox_inches='tight')
